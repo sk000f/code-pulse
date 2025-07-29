@@ -58,12 +58,7 @@ func (s *MetricsService) CollectGithubMetricsByWorkflow(owner, repo, workflowNam
 }
 
 func (s *MetricsService) saveGithubWorkflowRun(owner, repo string, run github.WorkflowRun) error {
-	var duration int
-	if !run.RunStartedAt.IsZero() && !run.UpdatedAt.IsZero() {
-		duration = int(run.UpdatedAt.Sub(run.RunStartedAt).Seconds())
-	} else {
-		duration = int(run.UpdatedAt.Sub(run.CreatedAt).Seconds())
-	}
+	duration := run.GetDurationSeconds()
 
 	status := run.Status
 	if run.Conclusion != "" {

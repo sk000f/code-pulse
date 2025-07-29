@@ -37,6 +37,19 @@ type WorkflowRun struct {
 	RunStartedAt time.Time `json:"run_started_at"`
 }
 
+func (wr *WorkflowRun) GetDurationSeconds() int {
+	if wr.RunStartedAt.IsZero() || wr.UpdatedAt.IsZero() {
+		return 0
+	}
+	
+	duration := wr.UpdatedAt.Sub(wr.RunStartedAt)
+	if duration < 0 {
+		return 0
+	}
+	
+	return int(duration.Seconds())
+}
+
 type WorkflowRunsResponse struct {
 	TotalCount   int           `json:"total_count"`
 	WorkflowRuns []WorkflowRun `json:"workflow_runs"`
