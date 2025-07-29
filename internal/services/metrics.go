@@ -28,33 +28,58 @@ func NewMetricsService(db *sql.DB, githubToken, sonarURL, sonarToken, jiraURL, j
 }
 
 func (s *MetricsService) CollectGithubMetrics(owner, repo string) error {
-	runs, err := s.githubClient.GetWorkflowRuns(owner, repo)
+	runs, err := s.githubClient.GetWorkflowRuns(owner, repo, 0)
 	if err != nil {
 		return fmt.Errorf("failed to get workflow runs: %w", err)
 	}
 
 	for _, run := range runs {
-		duration := int(run.UpdatedAt.Sub(run.CreatedAt).Seconds())
-		status := run.Status
-		if run.Conclusion != "" {
-			status = run.Conclusion
-		}
-
-		workflow := &models.GithubWorkflow{
-			Repository:   fmt.Sprintf("%s/%s", owner, repo),
-			WorkflowName: run.Name,
-			Status:       status,
-			Duration:     duration,
-			CreatedAt:    run.CreatedAt,
-			CompletedAt:  run.UpdatedAt,
-		}
-
-		if err := s.saveGithubWorkflow(workflow); err != nil {
-			return fmt.Errorf("failed to save workflow: %w", err)
+		if err := s.saveGithubWorkflowRun(owner, repo, run); err != nil {
+			return fmt.Errorf("failed to save workflow run: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (s *MetricsService) CollectGithubMetricsByWorkflow(owner, repo, workflowName string) error {
+	runs, err := s.githubClient.GetWorkflowRunsByName(owner, repo, workflowName)
+	if err != nil {
+		return fmt.Errorf("failed to get workflow runs for %s: %w", workflowName, err)
+	}
+
+	for _, run := range runs {
+		if err := s.saveGithubWorkflowRun(owner, repo, run); err != nil {
+			return fmt.Errorf("failed to save workflow run: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *MetricsService) saveGithubWorkflowRun(owner, repo string, run github.WorkflowRun) error {
+	var duration int
+	if !run.RunStartedAt.IsZero() && !run.UpdatedAt.IsZero() {
+		duration = int(run.UpdatedAt.Sub(run.RunStartedAt).Seconds())
+	} else {
+		duration = int(run.UpdatedAt.Sub(run.CreatedAt).Seconds())
+	}
+
+	status := run.Status
+	if run.Conclusion != "" {
+		status = run.Conclusion
+	}
+
+	workflow := &models.GithubWorkflow{
+		Repository:   fmt.Sprintf("%s/%s", owner, repo),
+		WorkflowName: run.Name,
+		Status:       status,
+		Duration:     duration,
+		CreatedAt:    run.CreatedAt,
+		CompletedAt:  run.UpdatedAt,
+	}
+
+	return s.saveGithubWorkflow(workflow)
 }
 
 func (s *MetricsService) CollectSonarqubeMetrics(projectKey string) error {
