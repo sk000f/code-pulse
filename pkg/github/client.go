@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 )
 
@@ -53,7 +52,7 @@ func NewClient(token string) *Client {
 
 func (c *Client) GetWorkflows(owner, repo string) ([]Workflow, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/actions/workflows", c.baseURL, owner, repo)
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -104,10 +103,10 @@ func (c *Client) GetWorkflowRunsByName(owner, repo, workflowName string) ([]Work
 func (c *Client) GetWorkflowRuns(owner, repo string, workflowID int) ([]WorkflowRun, error) {
 	params := url.Values{}
 	params.Set("per_page", "100")
-	
-	url := fmt.Sprintf("%s/repos/%s/%s/actions/workflows/%d/runs?%s", 
+
+	url := fmt.Sprintf("%s/repos/%s/%s/actions/workflows/%d/runs?%s",
 		c.baseURL, owner, repo, workflowID, params.Encode())
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
